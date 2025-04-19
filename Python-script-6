@@ -1,36 +1,28 @@
-
-# start-stop-all-instances-region
-
 import boto3
 
 def lambda_handler(event, context):
-    # Set the AWS region
-    region = 'us-east-1'  # Replace with your AWS region, e.g., 'us-east-1'
-
-    # Create EC2 client
+    region = 'us-east-1'  # Replace with your region
     ec2 = boto3.client('ec2', region_name=region)
 
-    # Get all stopped instances
-    stopped_instances = ec2.describe_instances(Filters=[{'Name': 'instance-state-name', 'Values': ['stopped']}])
-    
     # Start all stopped instances
-    for reservation in stopped_instances['Reservations']:
-        for instance in reservation['Instances']:
-            instance_id = instance['InstanceId']
-            print(f"Starting instance: {instance_id}")
-            ec2.start_instances(InstanceIds=[instance_id])
-    
-    # Get all running instances
-    running_instances = ec2.describe_instances(Filters=[{'Name': 'instance-state-name', 'Values': ['running']}])
+    stopped = ec2.describe_instances(Filters=[{'Name': 'instance-state-name', 'Values': ['stopped']}])
+    stopped_ids = [i['InstanceId'] for r in stopped['Reservations'] for i in r['Instances']]
+    if stopped_ids:
+        ec2.start_instances(InstanceIds=stopped_ids)
+        print(f"Started instances: {stopped_ids}")
     
     # Stop all running instances
-    for reservation in running_instances['Reservations']:
-        for instance in reservation['Instances']:
-            instance_id = instance['InstanceId']
-            print(f"Stopping instance: {instance_id}")
-            ec2.stop_instances(InstanceIds=[instance_id])
-    
-    print("EC2 instances toggled successfully.")
+    running = ec2.describe_instances(Filters=[{'Name': 'instance-state-name', 'Values': ['running']}])
+    running_ids = [i['InstanceId'] for r in running['Reservations'] for i in r['Instances']]
+    if running_ids:
+        ec2.stop_instances(InstanceIds=running_ids)
+        print(f"Stopped instances: {running_ids}")
+
+    return {
+        'statusCode': 200,
+        'body': 'EC2 start/stop complete.'
+    }
+
 
 
 IAM permissions : Startinstance,Stopinstance, Describeinstance
